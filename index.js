@@ -84,6 +84,7 @@ server.use("/users", isAuth(), usersRouter.router);
 server.use("/auth", authRouter.router);
 server.use("/cart", isAuth(), cartRouter.router);
 server.use("/orders", isAuth(), ordersRouter.router);
+server.get("*", (req, res) => res.sendFile(path.resolve('build', 'index.html')));
 
 
 // -----  MIDDLE WARES  --------------------------------------------
