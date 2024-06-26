@@ -25,6 +25,8 @@ const { isAuth, sanitizeUser, cookieExtractor } = require("./services/common");
 const { log } = require("console");
 const { Order } = require('./model/Order');
 
+// ---------- email -------------------------------
+
 
 // server.use(express.raw({type: 'application/json'}));
 
@@ -86,6 +88,9 @@ server.use("/users", isAuth(), usersRouter.router);
 server.use("/auth", authRouter.router);
 server.use("/cart", isAuth(), cartRouter.router);
 server.use("/orders", isAuth(), ordersRouter.router);
+
+
+
 server.get("*", (req, res) => res.sendFile(path.resolve('build', 'index.html')));
 
 

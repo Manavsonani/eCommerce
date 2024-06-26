@@ -1,8 +1,9 @@
 const { User } = require("../model/User");
 const crypto = require("crypto");
-const { sanitizeUser } = require("../services/common");
+const { sanitizeUser, sendMail } = require("../services/common");
 
 const jwt = require("jsonwebtoken");
+const { log } = require("console");
 
 
 exports.createUser = async (req, res) => {
@@ -49,6 +50,7 @@ exports.createUser = async (req, res) => {
   }
 };
 
+
 exports.loginUser = async (req, res) => {
   // console.log(req.user);
   const user = req.user;
@@ -60,6 +62,19 @@ exports.loginUser = async (req, res) => {
     .json({ id: user.id, role: user.role });
 };
 
+
+exports.logout = async (req, res) => {
+  // console.log(req.user);
+  const user = req.user;
+  res.cookie("jwt", null, {
+    expires: new Date(Date.now() ),
+    httpOnly: true,
+  })
+    .sendStatus(200)
+    
+};
+
+
 exports.checkAuth = async (req, res) => {
   // console.log(req.user);
 
@@ -70,4 +85,72 @@ exports.checkAuth = async (req, res) => {
     res.sendStatus(401);
   }
 
+};
+
+
+exports.resetPasswordRequest = async (req, res) => {
+  const email = req.body.email;
+  // console.log(req.body.email);
+  const user = await User.findOne({ email: email });
+
+  if (user) {
+    const token = crypto.randomBytes(48).toString('hex');
+    user.resetPasswordToken = token;
+    await user.save()
+
+    const resetPageLink = "http://localhost:3000/reset-password?token=" + token + '&email=' + email;
+    const subject = "Reset password for your e-commerce account ";
+    const html = `<p> Click <a href='${resetPageLink}'>here</a> to Reset your password </p>`;
+    if (email) {
+      const response = await sendMail({ to: email, subject, html });
+      console.log(response);
+      res.json(response)
+
+    }
+    else {
+      res.sendStatus(400);
+    }
+  } else {
+    res.sendStatus(400);
+
+  }
+};
+
+
+exports.resetPassword = async (req, res) => {
+  const { email, password, token } = req.body;
+  // console.log(req.body.email);
+  const user = await User.findOne({ email: email, resetPasswordToken: token });
+
+  if (user) {
+    const salt = crypto.randomBytes(16);
+    crypto.pbkdf2(
+      req.body.password,
+      salt,
+      310000,
+      32,
+      "sha256",
+      async function (err, hashedPassword) {
+        user.password = hashedPassword;
+        user.salt = salt;
+        await user.save()
+
+        const subject = "Successfully password reset for your e-commerce account ";
+        const html = `<p> Successfully Reset your password </p>`;
+        if (email) {
+          const response = await sendMail({ to: email, subject, html });
+          console.log(response);
+          res.json(response)
+
+        }
+        else {
+          res.sendStatus(400);
+        }
+      })
+
+
+  } else {
+    res.sendStatus(400);
+
+  }
 };
